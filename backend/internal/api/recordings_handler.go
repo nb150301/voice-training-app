@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+	"voice-training-app/internal/audio"
 	"voice-training-app/internal/database"
 	"voice-training-app/internal/models"
 
@@ -120,6 +122,26 @@ func UploadRecording(c *gin.Context) {
 		})
 		return
 	}
+
+	// Process audio asynchronously (transcode + pitch detection)
+	go func() {
+		wavPath, pitchHz, err := audio.ProcessAudioFile(filePath)
+		if err != nil {
+			log.Printf("Audio processing failed for recording %s: %v", recording.ID, err)
+			return
+		}
+
+		// Update recording with pitch data
+		_, err = database.DB.Exec(context.Background(),
+			`UPDATE recordings SET pitch_hz = $1 WHERE id = $2`,
+			pitchHz, recording.ID)
+
+		if err != nil {
+			log.Printf("Failed to update pitch for recording %s: %v", recording.ID, err)
+		} else {
+			log.Printf("Processed recording %s: WAV=%s, Pitch=%.2f Hz", recording.ID, wavPath, pitchHz)
+		}
+	}()
 
 	c.JSON(http.StatusCreated, models.APIResponse{
 		Success: true,
