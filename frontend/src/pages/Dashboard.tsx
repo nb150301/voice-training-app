@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import AudioRecorder from '../components/AudioRecorder';
+import PitchStatistics from '../components/PitchStatistics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -91,6 +92,10 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <PitchStatistics />
         </div>
 
         <AudioRecorder
