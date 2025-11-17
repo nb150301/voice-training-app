@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi, User } from '../lib/api';
+import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 export default function Dashboard() {
