@@ -41,3 +41,13 @@ Thumbs.db
 
 # Air (Go hot-reload)
 tmp/
+
+# Uploads (keep directory structure but ignore files)
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/recordings/
+!backend/uploads/processed/
+backend/uploads/recordings/*
+backend/uploads/processed/*
+!backend/uploads/recordings/.gitkeep
+!backend/uploads/processed/.gitkeep

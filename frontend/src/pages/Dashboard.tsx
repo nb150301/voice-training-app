@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
+import AudioRecorder from '../components/AudioRecorder';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -92,17 +93,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Start Your Voice Training
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Ready to improve your voice? Begin your daily practice session.
-          </p>
-          <button className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
-            Start Practice Session
-          </button>
-        </div>
+        <AudioRecorder
+          onRecordingComplete={(blob) => {
+            console.log('Recording completed:', blob);
+            // TODO: Upload to backend in next step
+          }}
+        />
 
         {error && (
           <div className="mt-4 bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">

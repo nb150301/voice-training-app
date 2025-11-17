@@ -64,6 +64,24 @@ export interface LoginResponse {
   token: string;
 }
 
+// Recording types
+export interface Recording {
+  id: string;
+  user_id: string;
+  file_path: string;
+  original_filename: string;
+  duration: number;
+  file_size: number;
+  pitch_hz?: number;
+  created_at: string;
+}
+
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
 // Auth API functions
 export const authApi = {
   register: async (data: RegisterRequest): Promise<ApiResponse<{ user: User }>> => {
@@ -87,6 +105,51 @@ export const authApi = {
   logout: async (): Promise<ApiResponse<null>> => {
     const response = await api.post('/auth/logout');
     localStorage.removeItem('token');
+    return response.data;
+  },
+};
+
+// Recordings API functions
+export const recordingsApi = {
+  upload: async (
+    audioBlob: Blob,
+    filename: string,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<ApiResponse<{ recording: Recording }>> => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, filename);
+
+    const response = await api.post('/recordings/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress: UploadProgress = {
+            loaded: progressEvent.loaded,
+            total: progressEvent.total,
+            percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total),
+          };
+          onProgress(progress);
+        }
+      },
+    });
+
+    return response.data;
+  },
+
+  list: async (): Promise<ApiResponse<{ recordings: Recording[] }>> => {
+    const response = await api.get('/recordings');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<ApiResponse<{ recording: Recording }>> => {
+    const response = await api.get(`/recordings/${id}`);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<ApiResponse<null>> => {
+    const response = await api.delete(`/recordings/${id}`);
     return response.data;
   },
 };

@@ -29,12 +29,19 @@ func main() {
 
 	// CORS configuration
 	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
+	allowedOrigins := []string{
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"http://localhost:5175",
+	}
+
+	// If custom frontend URL is set, add it to allowed origins
+	if frontendURL != "" {
+		allowedOrigins = append(allowedOrigins, frontendURL)
 	}
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{frontendURL},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -50,6 +57,15 @@ func main() {
 			auth.POST("/login", api.Login)
 			auth.POST("/logout", api.Logout)
 			auth.GET("/me", middleware.AuthRequired(), api.Me)
+		}
+
+		recordings := v1.Group("/recordings")
+		recordings.Use(middleware.AuthRequired())
+		{
+			recordings.POST("/upload", api.UploadRecording)
+			recordings.GET("", api.ListRecordings)
+			recordings.GET("/:id", api.GetRecording)
+			recordings.DELETE("/:id", api.DeleteRecording)
 		}
 	}
 
