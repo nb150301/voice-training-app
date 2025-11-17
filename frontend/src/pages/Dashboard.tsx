@@ -6,6 +6,7 @@ import AudioRecorder from '../components/AudioRecorder';
 import PitchStatistics from '../components/PitchStatistics';
 import PitchHistoryGraph from '../components/PitchHistoryGraph';
 import PitchFeedback from '../components/PitchFeedback';
+import TargetPitchSettings from '../components/TargetPitchSettings';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -106,6 +107,10 @@ export default function Dashboard() {
 
         <div className="mb-6">
           <PitchFeedback />
+        </div>
+
+        <div className="mb-6">
+          <TargetPitchSettings />
         </div>
 
         <AudioRecorder
