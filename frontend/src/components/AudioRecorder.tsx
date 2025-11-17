@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useAudioVisualizer } from '../hooks/useAudioVisualizer';
 import { recordingsApi, type UploadProgress, type Recording } from '../lib/api';
 import { formatPitch, getPitchCategory, getPitchColor, getPitchBgColor } from '../lib/pitch';
+import { createAudioProcessor, type AudioProcessor } from '../lib/audioProcessor';
 import RealtimePitchMeter from './RealtimePitchMeter';
 
 interface AudioRecorderProps {
@@ -24,6 +25,9 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
   } = useAudioRecorder();
 
   const { canvasRef, analyser, startVisualizing, stopVisualizing } = useAudioVisualizer();
+
+  // Audio processor for noise reduction and filtering
+  const audioProcessorRef = useRef<AudioProcessor | null>(null);
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);

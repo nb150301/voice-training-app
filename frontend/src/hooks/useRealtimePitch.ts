@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { createAudioProcessor, type AudioProcessor } from '../lib/audioProcessor';
 
 interface UseRealtimePitchReturn {
   currentPitch: number | null;
@@ -72,6 +73,7 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const audioProcessorRef = useRef<AudioProcessor | null>(null);
 
   const stopPitchDetection = useCallback(() => {
     setIsDetecting(false);
@@ -80,6 +82,12 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
+    }
+
+    // Clean up audio processor
+    if (audioProcessorRef.current) {
+      audioProcessorRef.current.dispose();
+      audioProcessorRef.current = null;
     }
 
     analyserRef.current = null;
@@ -93,10 +101,20 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
     // Get audio context from analyser
     audioContextRef.current = (analyser.context as AudioContext);
 
+    // Initialize audio processor with enhanced filtering for voice
+    audioProcessorRef.current = createAudioProcessor(audioContextRef.current, {
+      noiseGateThreshold: -35, // More aggressive noise gate
+      highPassFrequency: 80,   // Slightly higher to reduce more rumble
+      lowPassFrequency: 1800,  // Slightly lower to reduce more hiss
+      targetLevel: 0.25,       // Lower target level for more headroom
+      maxGain: 3.0,           // Reduced max gain to prevent feedback
+      gainSmoothing: 0.05,    // Slower smoothing for stability
+    });
+
     let lastUpdateTime = 0;
 
     const detect = () => {
-      if (!analyserRef.current || !audioContextRef.current) {
+      if (!analyserRef.current || !audioContextRef.current || !audioProcessorRef.current) {
         stopPitchDetection();
         return;
       }
@@ -109,30 +127,59 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
         const bufferLength = fftSize;
         const timeData = new Float32Array(bufferLength);
 
-        // Get time domain data
-        const waveformData = new Uint8Array(bufferLength);
-        analyserRef.current.getByteTimeDomainData(waveformData);
+        // Get processed audio data from audio processor
+        const processedAudio = audioProcessorRef.current.getProcessedaudioData();
 
-        // Convert to Float32Array (-1 to 1)
-        for (let i = 0; i < bufferLength; i++) {
-          timeData[i] = (waveformData[i] - 128) / 128;
+        // Use processed audio if available, otherwise fallback to raw data
+        let audioToAnalyze = processedAudio;
+        if (audioToAnalyze.length === 0) {
+          // Fallback to raw audio if processor not ready
+          const waveformData = new Uint8Array(bufferLength);
+          analyserRef.current.getByteTimeDomainData(waveformData);
+
+          for (let i = 0; i < bufferLength; i++) {
+            timeData[i] = (waveformData[i] - 128) / 128;
+          }
+          audioToAnalyze = timeData;
         }
 
-        // Detect pitch
-        const pitch = detectPitch(timeData, audioContextRef.current.sampleRate);
+        // Detect pitch using processed audio
+        const pitch = detectPitch(audioToAnalyze, audioContextRef.current.sampleRate);
 
-        // Apply smoothing (exponential moving average)
+        // Apply enhanced smoothing with voice-specific parameters
         if (pitch > 0) {
           setCurrentPitch((prevPitch) => {
             if (prevPitch === null) return pitch;
-            // Smooth with 0.3 factor to reduce jitter
-            return prevPitch * 0.7 + pitch * 0.3;
+
+            // Enhanced smoothing that adapts to pitch changes
+            const pitchDiff = Math.abs(pitch - prevPitch);
+            let smoothingFactor = 0.2; // Default smoothing
+
+            // Less smoothing for large pitch changes (allows quick transitions)
+            if (pitchDiff > 50) {
+              smoothingFactor = 0.4;
+            } else if (pitchDiff > 20) {
+              smoothingFactor = 0.3;
+            }
+
+            // More smoothing for small changes (reduces jitter)
+            else {
+              smoothingFactor = 0.15;
+            }
+
+            return prevPitch * (1 - smoothingFactor) + pitch * smoothingFactor;
           });
         } else {
-          // Only clear pitch if no pitch detected for 3 consecutive updates
+          // Gradual decay with persistence to prevent flickering
           setCurrentPitch((prevPitch) => {
-            // Gradually decay to 0 to prevent flickering
-            return prevPitch !== null && prevPitch > 0 ? prevPitch * 0.9 : null;
+            if (prevPitch === null || prevPitch <= 0) return null;
+
+            // Slower decay for voice pitch ranges
+            const decayFactor = prevPitch > 150 ? 0.95 : 0.92;
+            const newPitch = prevPitch * decayFactor;
+
+            // Only clear when very low
+            return newPitch > 10 ? newPitch : null;
           });
         }
 

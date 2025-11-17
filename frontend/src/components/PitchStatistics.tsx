@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { recordingsApi, type Recording } from '../lib/api';
 import { formatPitch, getPitchCategory, getPitchColor, getPitchBgColor } from '../lib/pitch';
 
-interface PitchStats {
+export interface PitchStats {
   totalRecordings: number;
   recordingsWithPitch: number;
   minPitch: number | null;

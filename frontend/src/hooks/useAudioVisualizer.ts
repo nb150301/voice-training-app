@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 interface UseAudioVisualizerReturn {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   analyser: AnalyserNode | null;
-  startVisualizing: (stream: MediaStream) => void;
+  startVisualizing: (stream: MediaStream, externalAnalyser?: AnalyserNode) => void;
   stopVisualizing: () => void;
 }
 
@@ -13,26 +13,36 @@ export const useAudioVisualizer = (): UseAudioVisualizerReturn => {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
 
-  const startVisualizing = (stream: MediaStream) => {
+  const startVisualizing = (stream: MediaStream, externalAnalyser?: AnalyserNode) => {
     console.log('[Visualizer] Starting visualization with stream:', stream);
     console.log('[Visualizer] Stream active:', stream.active);
     console.log('[Visualizer] Audio tracks:', stream.getAudioTracks());
+    console.log('[Visualizer] External analyser provided:', !!externalAnalyser);
 
-    // Create audio context
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const analyserNode = ctx.createAnalyser();
-    analyserNode.fftSize = 2048;
+    let analyserNode: AnalyserNode;
 
-    console.log('[Visualizer] AudioContext created, state:', ctx.state);
-    console.log('[Visualizer] Analyser FFT size:', analyserNode.fftSize);
+    if (externalAnalyser) {
+      // Use external analyser (from AudioProcessor)
+      analyserNode = externalAnalyser;
+      console.log('[Visualizer] Using external analyser for processed audio');
+      audioContextRef.current = externalAnalyser.context as AudioContext;
+    } else {
+      // Fallback: create our own analyser for raw audio
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyserNode = ctx.createAnalyser();
+      analyserNode.fftSize = 2048;
 
-    // Connect stream to analyser
-    const source = ctx.createMediaStreamSource(stream);
-    source.connect(analyserNode);
+      console.log('[Visualizer] AudioContext created, state:', ctx.state);
+      console.log('[Visualizer] Analyser FFT size:', analyserNode.fftSize);
 
-    console.log('[Visualizer] MediaStreamSource connected to analyser');
+      // Connect stream to analyser
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(analyserNode);
 
-    audioContextRef.current = ctx;
+      console.log('[Visualizer] MediaStreamSource connected to analyser');
+      audioContextRef.current = ctx;
+    }
+
     analyserRef.current = analyserNode;
 
     // Start visualization

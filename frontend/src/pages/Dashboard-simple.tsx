@@ -4,12 +4,8 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import AudioRecorder from '../components/AudioRecorder';
 import PitchStatistics from '../components/PitchStatistics';
-// Temporarily commented out to fix import errors
-// import PitchHistoryGraph from '../components/PitchHistoryGraph';
-// import PitchFeedback from '../components/PitchFeedback';
-// import TargetPitchSettings from '../components/TargetPitchSettings';
 
-export default function Dashboard() {
+export default function DashboardSimple() {
   const navigate = useNavigate();
   const { user, setUser, logout } = useAuthStore();
   const [loading, setLoading] = useState(true);
@@ -27,7 +23,6 @@ export default function Dashboard() {
       } catch (err) {
         console.error('Dashboard auth check failed:', err);
         setError('Failed to connect to server. Please check if the backend is running.');
-        // Don't immediately redirect - show error to user
         setTimeout(() => {
           navigate('/login');
         }, 3000);
@@ -107,22 +102,9 @@ export default function Dashboard() {
           <PitchStatistics />
         </div>
 
-        <div className="mb-6">
-          <PitchHistoryGraph />
-        </div>
-
-        <div className="mb-6">
-          <PitchFeedback />
-        </div>
-
-        <div className="mb-6">
-          <TargetPitchSettings />
-        </div>
-
         <AudioRecorder
           onRecordingComplete={(blob) => {
             console.log('Recording completed:', blob);
-            // TODO: Upload to backend in next step
           }}
         />
 
