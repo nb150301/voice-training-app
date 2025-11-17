@@ -4,6 +4,7 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import AudioRecorder from '../components/AudioRecorder';
 import PitchStatistics from '../components/PitchStatistics';
+import PitchHistoryGraph from '../components/PitchHistoryGraph';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -96,6 +97,10 @@ export default function Dashboard() {
 
         <div className="mb-6">
           <PitchStatistics />
+        </div>
+
+        <div className="mb-6">
+          <PitchHistoryGraph />
         </div>
 
         <AudioRecorder
