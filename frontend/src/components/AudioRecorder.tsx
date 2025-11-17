@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useAudioVisualizer } from '../hooks/useAudioVisualizer';
-import { recordingsApi, type UploadProgress } from '../lib/api';
+import { recordingsApi, type UploadProgress, type Recording } from '../lib/api';
+import { formatPitch, getPitchCategory, getPitchColor, getPitchBgColor } from '../lib/pitch';
 
 interface AudioRecorderProps {
   onRecordingComplete?: (blob: Blob) => void;
@@ -28,6 +29,8 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadedRecording, setUploadedRecording] = useState<Recording | null>(null);
+  const [isPitchLoading, setIsPitchLoading] = useState(false);
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
@@ -63,17 +66,24 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
     setUploadError(null);
     setUploadProgress(null);
     setUploadSuccess(false);
+    setUploadedRecording(null);
 
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `recording-${timestamp}.webm`;
 
-      await recordingsApi.upload(audioBlob, filename, (progress) => {
+      const response = await recordingsApi.upload(audioBlob, filename, (progress) => {
         setUploadProgress(progress);
       });
 
-      setUploadSuccess(true);
-      setUploadProgress(null);
+      if (response.data?.recording) {
+        setUploadedRecording(response.data.recording);
+        setUploadSuccess(true);
+        setUploadProgress(null);
+
+        // Poll for pitch data (backend processes asynchronously)
+        pollForPitch(response.data.recording.id);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       setUploadError(errorMessage);
@@ -81,6 +91,43 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // Poll for pitch data after upload
+  const pollForPitch = async (recordingId: string) => {
+    setIsPitchLoading(true);
+    let attempts = 0;
+    const maxAttempts = 10; // Poll for up to 10 seconds
+    const pollInterval = 1000; // Poll every 1 second
+
+    const poll = async () => {
+      try {
+        const response = await recordingsApi.getById(recordingId);
+        if (response.data?.recording) {
+          const recording = response.data.recording;
+
+          if (recording.pitch_hz && recording.pitch_hz > 0) {
+            // Pitch detected!
+            setUploadedRecording(recording);
+            setIsPitchLoading(false);
+            return;
+          }
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, pollInterval);
+        } else {
+          // Give up after max attempts
+          setIsPitchLoading(false);
+        }
+      } catch (err) {
+        console.error('Error polling for pitch:', err);
+        setIsPitchLoading(false);
+      }
+    };
+
+    poll();
   };
 
   // Notify parent when recording is complete
@@ -277,7 +324,7 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
       )}
 
       {/* Upload Success */}
-      {uploadSuccess && (
+      {uploadSuccess && uploadedRecording && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -286,8 +333,49 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
             <div className="flex-1">
               <p className="font-medium text-blue-800">Upload Successful!</p>
               <p className="text-sm text-blue-700 mt-1">
-                Your recording has been uploaded and is being processed. We'll analyze your voice and provide feedback soon.
+                Your recording has been uploaded and analyzed.
               </p>
+
+              {/* Pitch Analysis Results */}
+              <div className="mt-4 bg-white rounded-lg p-4 border border-blue-200">
+                <h4 className="font-semibold text-gray-800 mb-3">Voice Analysis</h4>
+
+                {isPitchLoading ? (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span className="text-sm">Analyzing pitch...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Detected Pitch:</span>
+                      <span className={`font-mono font-bold text-lg ${getPitchColor(uploadedRecording.pitch_hz || 0)}`}>
+                        {formatPitch(uploadedRecording.pitch_hz)}
+                      </span>
+                    </div>
+
+                    {uploadedRecording.pitch_hz && uploadedRecording.pitch_hz > 0 && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Voice Type:</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPitchBgColor(uploadedRecording.pitch_hz)} ${getPitchColor(uploadedRecording.pitch_hz)}`}>
+                            {getPitchCategory(uploadedRecording.pitch_hz)}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <p className="text-xs text-gray-500">
+                            Recording duration: {formatTime(recordingTime)}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
