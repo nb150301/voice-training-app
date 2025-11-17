@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import AudioRecorder from '../components/AudioRecorder';
 import PitchStatistics from '../components/PitchStatistics';
 import PitchHistoryGraph from '../components/PitchHistoryGraph';
+import PitchFeedback from '../components/PitchFeedback';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -101,6 +102,10 @@ export default function Dashboard() {
 
         <div className="mb-6">
           <PitchHistoryGraph />
+        </div>
+
+        <div className="mb-6">
+          <PitchFeedback />
         </div>
 
         <AudioRecorder
