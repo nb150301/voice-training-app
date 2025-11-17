@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { createAudioProcessor, type AudioProcessor } from '../lib/audioProcessor';
+import { createPitchDetector, type PitchDetectionResult, type PitchDetectionConfig } from '../lib/pitchDetection';
 
 interface UseRealtimePitchReturn {
   currentPitch: number | null;
