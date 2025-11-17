@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface UseAudioVisualizerReturn {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  analyser: AnalyserNode | null;
   startVisualizing: (stream: MediaStream) => void;
   stopVisualizing: () => void;
 }
@@ -178,6 +179,7 @@ export const useAudioVisualizer = (): UseAudioVisualizerReturn => {
 
   return {
     canvasRef,
+    analyser: analyserRef.current,
     startVisualizing,
     stopVisualizing,
   };

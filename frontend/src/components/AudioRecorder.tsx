@@ -3,6 +3,7 @@ import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useAudioVisualizer } from '../hooks/useAudioVisualizer';
 import { recordingsApi, type UploadProgress, type Recording } from '../lib/api';
 import { formatPitch, getPitchCategory, getPitchColor, getPitchBgColor } from '../lib/pitch';
+import RealtimePitchMeter from './RealtimePitchMeter';
 
 interface AudioRecorderProps {
   onRecordingComplete?: (blob: Blob) => void;
@@ -22,7 +23,7 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
     resumeRecording,
   } = useAudioRecorder();
 
-  const { canvasRef, startVisualizing, stopVisualizing } = useAudioVisualizer();
+  const { canvasRef, analyser, startVisualizing, stopVisualizing } = useAudioVisualizer();
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -199,6 +200,9 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
           <p className="text-sm text-yellow-600 mt-2">Recording paused</p>
         )}
       </div>
+
+      {/* Real-time Pitch Meter */}
+      <RealtimePitchMeter analyser={analyser} isActive={isRecording} />
 
       {/* Control Buttons */}
       <div className="flex gap-3 justify-center">
