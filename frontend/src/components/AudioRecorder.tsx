@@ -14,6 +14,7 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
     recordingTime,
     audioBlob,
     error,
+    stream,
     startRecording,
     stopRecording,
     pauseRecording,
@@ -37,12 +38,14 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
 
   // Handle recording start
   const handleStart = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      startRecording();
+    console.log('[AudioRecorder] Starting recording...');
+    const stream = await startRecording();
+    console.log('[AudioRecorder] Recording started, stream:', stream);
+    if (stream) {
+      console.log('[AudioRecorder] Calling startVisualizing with stream');
       startVisualizing(stream);
-    } catch (err) {
-      console.error('Failed to start recording:', err);
+    } else {
+      console.error('[AudioRecorder] No stream returned from startRecording');
     }
   };
 
@@ -87,13 +90,6 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
     }
   }, [audioBlob, onRecordingComplete]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopVisualizing();
-    };
-  }, [stopVisualizing]);
-
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="mb-6">
@@ -113,12 +109,26 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
 
       {/* Waveform Visualization */}
       <div className="mb-6">
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={200}
-          className="w-full border border-gray-200 rounded-lg bg-gray-900"
-        />
+        <div className="relative">
+          <canvas
+            ref={canvasRef}
+            width={1200}
+            height={300}
+            className="w-full border-2 border-indigo-200 rounded-lg bg-gray-900 shadow-lg"
+          />
+          {isRecording && !isPaused && (
+            <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-500/90 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              RECORDING
+            </div>
+          )}
+          {isPaused && (
+            <div className="absolute top-4 right-4 flex items-center gap-2 bg-yellow-500/90 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+              <div className="w-2 h-2 bg-white rounded-full" />
+              PAUSED
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Recording Timer */}

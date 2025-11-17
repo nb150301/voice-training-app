@@ -6,7 +6,8 @@ interface UseAudioRecorderReturn {
   recordingTime: number;
   audioBlob: Blob | null;
   error: string | null;
-  startRecording: () => Promise<void>;
+  stream: MediaStream | null;
+  startRecording: () => Promise<MediaStream | null>;
   stopRecording: () => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
@@ -27,7 +28,7 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
   const streamRef = useRef<MediaStream | null>(null);
   const stopRecordingRef = useRef<(() => void) | null>(null);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (): Promise<MediaStream | null> => {
     try {
       setError(null);
       setAudioBlob(null);
@@ -96,10 +97,12 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
         });
       }, 1000);
 
+      return stream;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to access microphone';
       setError(errorMessage);
       console.error('Recording error:', err);
+      return null;
     }
   }, []);
 
@@ -154,6 +157,7 @@ export const useAudioRecorder = (): UseAudioRecorderReturn => {
     recordingTime,
     audioBlob,
     error,
+    stream: streamRef.current,
     startRecording,
     stopRecording,
     pauseRecording,
