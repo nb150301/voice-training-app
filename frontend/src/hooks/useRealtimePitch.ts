@@ -1,84 +1,53 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { createAudioProcessor, type AudioProcessor } from '../lib/audioProcessor';
 import { createPitchDetector, type PitchDetectionResult, type PitchDetectionConfig } from '../lib/pitchDetection';
+import { createTemporalFilter, type FilterConfig, type TemporalFilter } from '../lib/temporalFilters';
 
 interface UseRealtimePitchReturn {
   currentPitch: number | null;
+  currentConfidence: number;
+  currentClarity: number;
+  currentAlgorithm: 'yin' | 'autocorr' | 'hybrid';
+  filterQuality: {
+    stability: number;
+    errorCovariance: number;
+    confidence: number;
+  } | null;
   isDetecting: boolean;
   startPitchDetection: (analyser: AnalyserNode) => void;
   stopPitchDetection: () => void;
 }
 
-const MIN_PITCH = 50;  // Minimum pitch to detect (Hz)
-const MAX_PITCH = 500; // Maximum pitch to detect (Hz)
 const PITCH_UPDATE_INTERVAL = 100; // Update every 100ms
-
-/**
- * Autocorrelation algorithm for pitch detection
- * More robust than peak detection for voice signals
- */
-function detectPitch(audioBuffer: Float32Array, sampleRate: number): number {
-  const bufferSize = audioBuffer.length;
-
-  // Apply Hamming window to reduce spectral leakage
-  const hammingWindow = new Float32Array(bufferSize);
-  for (let i = 0; i < bufferSize; i++) {
-    hammingWindow[i] = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / (bufferSize - 1));
-  }
-
-  const windowedBuffer = new Float32Array(bufferSize);
-  for (let i = 0; i < bufferSize; i++) {
-    windowedBuffer[i] = audioBuffer[i] * hammingWindow[i];
-  }
-
-  // Autocorrelation
-  const correlations = new Float32Array(bufferSize);
-  for (let lag = 0; lag < bufferSize; lag++) {
-    let correlation = 0;
-    for (let i = 0; i < bufferSize - lag; i++) {
-      correlation += windowedBuffer[i] * windowedBuffer[i + lag];
-    }
-    correlations[lag] = correlation;
-  }
-
-  // Find the best lag (first major peak after lag 0)
-  let bestLag = 0;
-  let maxCorrelation = 0;
-
-  const minLag = Math.floor(sampleRate / MAX_PITCH);
-  const maxLag = Math.floor(sampleRate / MIN_PITCH);
-
-  for (let lag = minLag; lag < maxLag && lag < bufferSize / 2; lag++) {
-    if (correlations[lag] > maxCorrelation) {
-      maxCorrelation = correlations[lag];
-      bestLag = lag;
-    }
-  }
-
-  // Check if we found a valid pitch
-  if (bestLag === 0 || maxCorrelation < 0.3 * correlations[0]) {
-    return 0; // No clear pitch detected
-  }
-
-  const pitch = sampleRate / bestLag;
-  return pitch >= MIN_PITCH && pitch <= MAX_PITCH ? pitch : 0;
-}
 
 /**
  * Hook for real-time pitch detection using Web Audio API
  */
 export const useRealtimePitch = (): UseRealtimePitchReturn => {
   const [currentPitch, setCurrentPitch] = useState<number | null>(null);
+  const [currentConfidence, setCurrentConfidence] = useState<number>(0);
+  const [currentClarity, setCurrentClarity] = useState<number>(0);
+  const [currentAlgorithm, setCurrentAlgorithm] = useState<'yin' | 'autocorr' | 'hybrid'>('yin');
+  const [filterQuality, setFilterQuality] = useState<{
+    stability: number;
+    errorCovariance: number;
+    confidence: number;
+  } | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
 
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioProcessorRef = useRef<AudioProcessor | null>(null);
+  const pitchDetectorRef = useRef<any>(null);
+  const temporalFilterRef = useRef<TemporalFilter | null>(null);
 
   const stopPitchDetection = useCallback(() => {
     setIsDetecting(false);
     setCurrentPitch(null);
+    setCurrentConfidence(0);
+    setCurrentClarity(0);
+    setFilterQuality(null);
 
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
@@ -89,6 +58,18 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
     if (audioProcessorRef.current) {
       audioProcessorRef.current.dispose();
       audioProcessorRef.current = null;
+    }
+
+    // Clean up pitch detector
+    if (pitchDetectorRef.current) {
+      pitchDetectorRef.current.reset();
+      pitchDetectorRef.current = null;
+    }
+
+    // Clean up temporal filter
+    if (temporalFilterRef.current) {
+      temporalFilterRef.current.reset();
+      temporalFilterRef.current = null;
     }
 
     analyserRef.current = null;
@@ -112,10 +93,40 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
       gainSmoothing: 0.05,    // Slower smoothing for stability
     });
 
+    // Initialize YIN pitch detector with voice-optimized configuration
+    const pitchConfig: PitchDetectionConfig = {
+      sampleRate: audioContextRef.current.sampleRate,
+      bufferSize: 2048,
+      yinThreshold: 0.08,        // Very sensitive for voice
+      minPitch: 60,              // Extended lower range
+      maxPitch: 500,             // Extended upper range
+      confidenceThreshold: 0.25, // Lower threshold for more detection
+      temporalSmoothing: true,    // Enable temporal filtering
+      voiceOptimization: true,   // Voice-specific optimizations
+    };
+
+    pitchDetectorRef.current = createPitchDetector('yin', pitchConfig);
+
+    // Initialize temporal filter with voice-optimized configuration
+    const filterConfig: Partial<FilterConfig> = {
+      processNoise: 0.008,         // Lower noise for smoother output
+      measurementNoise: 0.05,      // Reduced measurement noise
+      medianWindowSize: 3,         // Smaller window for better responsiveness
+      adaptiveWindow: 2,           // Adaptive smoothing
+      sensitivityThreshold: 0.25,  // More sensitive to changes
+      confidenceThreshold: 0.3,    // Lower threshold for more detection
+      confidenceWeighting: true,   // Enable confidence weighting
+      outlierThreshold: 2.0,       // Outlier detection
+      outlierRejection: true,      // Enable outlier rejection
+    };
+
+    temporalFilterRef.current = createTemporalFilter(filterConfig);
+
     let lastUpdateTime = 0;
 
     const detect = () => {
-      if (!analyserRef.current || !audioContextRef.current || !audioProcessorRef.current) {
+      if (!analyserRef.current || !audioContextRef.current || !audioProcessorRef.current ||
+          !pitchDetectorRef.current || !temporalFilterRef.current) {
         stopPitchDetection();
         return;
       }
@@ -126,7 +137,6 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
       if (now - lastUpdateTime >= PITCH_UPDATE_INTERVAL) {
         const fftSize = analyserRef.current.fftSize;
         const bufferLength = fftSize;
-        const timeData = new Float32Array(bufferLength);
 
         // Get processed audio data from audio processor
         const processedAudio = audioProcessorRef.current.getProcessedaudioData();
@@ -138,50 +148,54 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
           const waveformData = new Uint8Array(bufferLength);
           analyserRef.current.getByteTimeDomainData(waveformData);
 
+          audioToAnalyze = new Float32Array(bufferLength);
           for (let i = 0; i < bufferLength; i++) {
-            timeData[i] = (waveformData[i] - 128) / 128;
+            audioToAnalyze[i] = (waveformData[i] - 128) / 128;
           }
-          audioToAnalyze = timeData;
         }
 
-        // Detect pitch using processed audio
-        const pitch = detectPitch(audioToAnalyze, audioContextRef.current.sampleRate);
+        // Detect pitch using YIN algorithm
+        const result: PitchDetectionResult = pitchDetectorRef.current.detectPitch(audioToAnalyze);
 
-        // Apply enhanced smoothing with voice-specific parameters
-        if (pitch > 0) {
-          setCurrentPitch((prevPitch) => {
-            if (prevPitch === null) return pitch;
+        // Apply comprehensive temporal filtering
+        let finalPitch = 0;
+        if (result.pitch > 0 && result.confidence >= pitchConfig.confidenceThreshold) {
+          // Apply temporal filtering (Kalman + Median + Adaptive + Outlier rejection)
+          finalPitch = temporalFilterRef.current.process(result.pitch, result.confidence, now);
+        }
 
-            // Enhanced smoothing that adapts to pitch changes
-            const pitchDiff = Math.abs(pitch - prevPitch);
-            let smoothingFactor = 0.2; // Default smoothing
+        // Update pitch with final filtered result
+        if (finalPitch > 0) {
+          setCurrentPitch(finalPitch);
 
-            // Less smoothing for large pitch changes (allows quick transitions)
-            if (pitchDiff > 50) {
-              smoothingFactor = 0.4;
-            } else if (pitchDiff > 20) {
-              smoothingFactor = 0.3;
-            }
+          // Update confidence and clarity with smoothing
+          setCurrentConfidence((prev) => prev * 0.8 + result.confidence * 0.2);
+          setCurrentClarity((prev) => prev * 0.8 + result.clarity * 0.2);
+          setCurrentAlgorithm(result.algorithm);
 
-            // More smoothing for small changes (reduces jitter)
-            else {
-              smoothingFactor = 0.15;
-            }
-
-            return prevPitch * (1 - smoothingFactor) + pitch * smoothingFactor;
+          // Update filter quality metrics
+          const qualityMetrics = temporalFilterRef.current.getQualityMetrics();
+          setFilterQuality({
+            stability: qualityMetrics.recentStability,
+            errorCovariance: qualityMetrics.errorCovariance,
+            confidence: qualityMetrics.confidence
           });
         } else {
-          // Gradual decay with persistence to prevent flickering
+          // Gradual decay with temporal filter state preservation
           setCurrentPitch((prevPitch) => {
             if (prevPitch === null || prevPitch <= 0) return null;
 
-            // Slower decay for voice pitch ranges
-            const decayFactor = prevPitch > 150 ? 0.95 : 0.92;
-            const newPitch = prevPitch * decayFactor;
-
-            // Only clear when very low
+            // Very gentle decay to maintain stability
+            const newPitch = prevPitch * 0.98;
             return newPitch > 10 ? newPitch : null;
           });
+
+          // Gentle confidence decay
+          setCurrentConfidence((prev) => Math.max(0, prev * 0.95));
+          setCurrentClarity((prev) => Math.max(0, prev * 0.95));
+
+          // Clear filter quality when no valid pitch
+          setFilterQuality(null);
         }
 
         lastUpdateTime = now;
@@ -202,6 +216,10 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
 
   return {
     currentPitch,
+    currentConfidence,
+    currentClarity,
+    currentAlgorithm,
+    filterQuality,
     isDetecting,
     startPitchDetection,
     stopPitchDetection,

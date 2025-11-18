@@ -26,7 +26,7 @@ const METER_ZONES: MeterZone[] = [
 ];
 
 export default function RealtimePitchMeter({ analyser, isActive }: RealtimePitchMeterProps) {
-  const { currentPitch, isDetecting, startPitchDetection, stopPitchDetection } = useRealtimePitch();
+  const { currentPitch, currentConfidence, currentClarity, currentAlgorithm, filterQuality, isDetecting, startPitchDetection, stopPitchDetection } = useRealtimePitch();
 
   // Start/stop detection based on analyser availability
   if (isActive && analyser && !isDetecting) {
@@ -163,11 +163,13 @@ export default function RealtimePitchMeter({ analyser, isActive }: RealtimePitch
       </div>
 
       {/* Status Indicator */}
-      <div className="flex items-center justify-center gap-2 text-sm">
+      <div className="flex items-center justify-center gap-2 text-sm mb-3">
         {isDetecting ? (
           <>
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-green-700">Detecting pitch...</span>
+            <span className="text-green-700">
+              Detecting pitch with {currentAlgorithm.toUpperCase()} algorithm
+            </span>
           </>
         ) : (
           <>
@@ -176,6 +178,124 @@ export default function RealtimePitchMeter({ analyser, isActive }: RealtimePitch
           </>
         )}
       </div>
+
+      {/* Quality Indicators */}
+      {isDetecting && currentPitch && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* Confidence Indicator */}
+          <div className="text-center">
+            <div className="text-xs text-gray-600 mb-1">Confidence</div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    currentConfidence > 0.8 ? 'bg-green-500' :
+                    currentConfidence > 0.6 ? 'bg-yellow-500' :
+                    currentConfidence > 0.4 ? 'bg-orange-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${Math.min(100, currentConfidence * 100)}%` }}
+                />
+              </div>
+              <span className={`text-xs font-mono ${
+                currentConfidence > 0.8 ? 'text-green-700' :
+                currentConfidence > 0.6 ? 'text-yellow-700' :
+                currentConfidence > 0.4 ? 'text-orange-700' : 'text-red-700'
+              }`}>
+                {Math.round(currentConfidence * 100)}%
+              </span>
+            </div>
+          </div>
+
+          {/* Clarity Indicator */}
+          <div className="text-center">
+            <div className="text-xs text-gray-600 mb-1">Signal Clarity</div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    currentClarity > 0.8 ? 'bg-blue-500' :
+                    currentClarity > 0.6 ? 'bg-indigo-500' :
+                    currentClarity > 0.4 ? 'bg-purple-500' : 'bg-gray-500'
+                  }`}
+                  style={{ width: `${Math.min(100, currentClarity * 100)}%` }}
+                />
+              </div>
+              <span className={`text-xs font-mono ${
+                currentClarity > 0.8 ? 'text-blue-700' :
+                currentClarity > 0.6 ? 'text-indigo-700' :
+                currentClarity > 0.4 ? 'text-purple-700' : 'text-gray-700'
+              }`}>
+                {Math.round(currentClarity * 100)}%
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Quality Metrics */}
+      {isDetecting && filterQuality && (
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="text-xs font-medium text-gray-700 mb-2">Temporal Filter Performance</div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-xs text-gray-600">Stability</div>
+              <div className={`text-sm font-mono ${
+                filterQuality.stability > 0.8 ? 'text-green-700' :
+                filterQuality.stability > 0.6 ? 'text-yellow-700' :
+                'text-orange-700'
+              }`}>
+                {Math.round(filterQuality.stability * 100)}%
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600">Precision</div>
+              <div className={`text-sm font-mono ${
+                filterQuality.confidence > 0.8 ? 'text-blue-700' :
+                filterQuality.confidence > 0.6 ? 'text-indigo-700' :
+                'text-purple-700'
+              }`}>
+                {Math.round(filterQuality.confidence * 100)}%
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600">Error</div>
+              <div className={`text-sm font-mono ${
+                filterQuality.errorCovariance < 0.1 ? 'text-green-700' :
+                filterQuality.errorCovariance < 0.3 ? 'text-yellow-700' :
+                'text-red-700'
+              }`}>
+                {(filterQuality.errorCovariance).toFixed(3)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quality Status Messages */}
+      {isDetecting && currentPitch && (
+        <div className="text-center">
+          {filterQuality && filterQuality.stability > 0.85 && currentConfidence > 0.7 && (
+            <div className="text-sm text-green-700 font-medium">
+              ✓ Excellent stability and voice detection
+            </div>
+          )}
+          {filterQuality && filterQuality.stability > 0.7 && currentConfidence > 0.5 && (
+            <div className="text-sm text-green-600 font-medium">
+              ✓ Good filter stability
+            </div>
+          )}
+          {filterQuality && filterQuality.stability < 0.5 && (
+            <div className="text-sm text-orange-700 font-medium">
+              ⚠️ Filter stabilizing... Keep voice steady
+            </div>
+          )}
+          {!filterQuality && currentConfidence <= 0.4 && (
+            <div className="text-sm text-orange-700 font-medium">
+              ⚠️ Move closer to microphone or reduce background noise
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Voice Range Reference */}
       <div className="mt-4 pt-4 border-t border-gray-200">
