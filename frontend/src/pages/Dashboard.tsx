@@ -14,6 +14,10 @@ import ExerciseBuilder from '../components/ExerciseBuilder';
 import SocialProfile from '../components/SocialProfile';
 import CommunityFeed from '../components/CommunityFeed';
 import CollaborativePractice from '../components/CollaborativePractice';
+import AIVoiceCoach from '../components/AIVoiceCoach';
+import MLRecommendations from '../components/MLRecommendations';
+import AISongAnalysis from '../components/AISongAnalysis';
+import VocalHealthMonitor from '../components/VocalHealthMonitor';
 import { useUserProfile } from '../components/UserProfileManager';
 // Temporarily commented out to fix import errors
 // import PitchHistoryGraph from '../components/PitchHistoryGraph';
@@ -27,7 +31,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'recording' | 'statistics' | 'learning' | 'achievements' | 'practice' | 'analytics' | 'builder' | 'profile' | 'community' | 'collaborative'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'recording' | 'statistics' | 'learning' | 'achievements' | 'practice' | 'analytics' | 'builder' | 'profile' | 'community' | 'collaborative' | 'ai-coach' | 'ml-recommendations' | 'song-analysis' | 'health-monitor'>('overview');
 
   // Handle settings changes
   const handleSettingsChange = (newSettings: any) => {
@@ -232,6 +236,46 @@ export default function Dashboard() {
               }`}
             >
               ✨ Builder
+            </button>
+            <button
+              onClick={() => setActiveTab('ai-coach')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'ai-coach'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🤖 AI Coach
+            </button>
+            <button
+              onClick={() => setActiveTab('ml-recommendations')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'ml-recommendations'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🧠 Smart Tips
+            </button>
+            <button
+              onClick={() => setActiveTab('song-analysis')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'song-analysis'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🎵 Song Analysis
+            </button>
+            <button
+              onClick={() => setActiveTab('health-monitor')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'health-monitor'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              ❤️ Health
             </button>
           </div>
         </div>
@@ -440,6 +484,66 @@ export default function Dashboard() {
               setActiveTab('practice');
             }}
           />
+        )}
+
+        {/* AI Voice Coach Tab */}
+        {activeTab === 'ai-coach' && (
+          <div className="space-y-6">
+            <AIVoiceCoach
+              onAnalysisComplete={(analysis) => {
+                console.log('AI Voice Analysis completed:', analysis);
+              }}
+              onExerciseRecommend={(exercise) => {
+                console.log('AI recommended exercise:', exercise);
+                setActiveTab('practice');
+              }}
+            />
+          </div>
+        )}
+
+        {/* ML Recommendations Tab */}
+        {activeTab === 'ml-recommendations' && (
+          <div className="space-y-6">
+            <MLRecommendations
+              onRecommendationSelect={(rec) => {
+                console.log('ML recommendation selected:', rec);
+                if (rec.exercise) {
+                  setActiveTab('practice');
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {/* AI Song Analysis Tab */}
+        {activeTab === 'song-analysis' && (
+          <div className="space-y-6">
+            <AISongAnalysis
+              onAnalysisComplete={(analysis) => {
+                console.log('Song analysis completed:', analysis);
+              }}
+              onPracticePlanGenerated={(plan) => {
+                console.log('Practice plan generated:', plan);
+                setActiveTab('practice');
+              }}
+            />
+          </div>
+        )}
+
+        {/* Vocal Health Monitor Tab */}
+        {activeTab === 'health-monitor' && (
+          <div className="space-y-6">
+            <VocalHealthMonitor
+              onHealthAlert={(alert) => {
+                console.log('Health alert:', alert);
+                // Could show notification or update UI
+              }}
+              onGoalAchieved={(goal) => {
+                console.log('Health goal achieved:', goal);
+                // Could trigger achievement unlock
+              }}
+            />
+          </div>
         )}
 
         {error && (
