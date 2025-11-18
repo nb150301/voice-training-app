@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard-simple';
+import DashboardEnhanced from './components/DashboardEnhanced';
+import DashboardSimple from './pages/Dashboard-simple';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -14,7 +15,16 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardEnhanced />
+            </ProtectedRoute>
+          }
+        />
+        {/* Fallback to simple dashboard for compatibility */}
+        <Route
+          path="/dashboard-simple"
+          element={
+            <ProtectedRoute>
+              <DashboardSimple />
             </ProtectedRoute>
           }
         />
