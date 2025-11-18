@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createVisualizationOptimizer, type VisualizationOptimizer, type VisualizationConfig } from '../lib/visualizationOptimizer';
+import { useAudioSettings } from '../lib/audioSettings';
 
 interface UseAudioVisualizerReturn {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -17,20 +18,16 @@ export const useAudioVisualizer = (): UseAudioVisualizerReturn => {
   const stopAnimationRef = useRef<(() => void) | null>(null);
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
 
+  // Get user audio settings
+  const { settings, getVisualizationConfig } = useAudioSettings();
+
   const startVisualizing = (stream: MediaStream, externalAnalyser?: AnalyserNode) => {
     console.log('[Visualizer] Starting optimized visualization with stream:', stream);
 
-    // Initialize visualization optimizer with voice-optimized settings
-    const vizConfig: Partial<VisualizationConfig> = {
-      targetFPS: 30,                           // Reduced from 60 for better performance
-      enableFrameSkipping: true,
-      adaptiveFrameRate: true,
-      enableHardwareAcceleration: true,
-      enableBatchRendering: true,
-      reduceComplexity: true,
-      enablePerformanceMetrics: true,
-      performanceMonitoringInterval: 1000,
-    };
+    // Initialize visualization optimizer with user-configured settings
+    const vizConfig = getVisualizationConfig();
+    vizConfig.enablePerformanceMetrics = settings.showPerformanceMetrics;
+    vizConfig.performanceMonitoringInterval = 1000;
 
     optimizerRef.current = createVisualizationOptimizer(vizConfig);
 

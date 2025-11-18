@@ -4,6 +4,7 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import AudioRecorder from '../components/AudioRecorder';
 import PitchStatistics from '../components/PitchStatistics';
+import AudioSettings from '../components/AudioSettings';
 // Temporarily commented out to fix import errors
 // import PitchHistoryGraph from '../components/PitchHistoryGraph';
 // import PitchFeedback from '../components/PitchFeedback';
@@ -14,6 +15,12 @@ export default function Dashboard() {
   const { user, setUser, logout } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Handle settings changes
+  const handleSettingsChange = (newSettings: any) => {
+    console.log('Audio settings updated:', newSettings);
+    // Settings are automatically applied via useAudioSettings hooks
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -116,7 +123,7 @@ export default function Dashboard() {
         </div>
 
         <div className="mb-6">
-          <TargetPitchSettings />
+          <AudioSettings onSettingsChange={handleSettingsChange} />
         </div>
 
         <AudioRecorder

@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { createAudioProcessor, type AudioProcessor } from '../lib/audioProcessor';
 import { createPitchDetector, type PitchDetectionResult, type PitchDetectionConfig } from '../lib/pitchDetection';
 import { createTemporalFilter, type FilterConfig, type TemporalFilter } from '../lib/temporalFilters';
+import { useAudioSettings } from '../lib/audioSettings';
 
 interface UseRealtimePitchReturn {
   currentPitch: number | null;
@@ -41,6 +42,9 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
   const audioProcessorRef = useRef<AudioProcessor | null>(null);
   const pitchDetectorRef = useRef<any>(null);
   const temporalFilterRef = useRef<TemporalFilter | null>(null);
+
+  // Get user audio settings
+  const { settings, getAudioProcessorConfig, getPitchDetectorConfig, getTemporalFilterConfig } = useAudioSettings();
 
   const stopPitchDetection = useCallback(() => {
     setIsDetecting(false);
@@ -83,43 +87,22 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
     // Get audio context from analyser
     audioContextRef.current = (analyser.context as AudioContext);
 
-    // Initialize audio processor with enhanced filtering for voice
-    audioProcessorRef.current = createAudioProcessor(audioContextRef.current, {
-      noiseGateThreshold: -35, // More aggressive noise gate
-      highPassFrequency: 80,   // Slightly higher to reduce more rumble
-      lowPassFrequency: 1800,  // Slightly lower to reduce more hiss
-      targetLevel: 0.25,       // Lower target level for more headroom
-      maxGain: 3.0,           // Reduced max gain to prevent feedback
-      gainSmoothing: 0.05,    // Slower smoothing for stability
-    });
+    // Initialize audio processor with user-configured settings
+    const processorConfig = getAudioProcessorConfig();
+    audioProcessorRef.current = createAudioProcessor(audioContextRef.current, processorConfig);
 
-    // Initialize YIN pitch detector with voice-optimized configuration
-    const pitchConfig: PitchDetectionConfig = {
-      sampleRate: audioContextRef.current.sampleRate,
-      bufferSize: 2048,
-      yinThreshold: 0.08,        // Very sensitive for voice
-      minPitch: 60,              // Extended lower range
-      maxPitch: 500,             // Extended upper range
-      confidenceThreshold: 0.25, // Lower threshold for more detection
-      temporalSmoothing: true,    // Enable temporal filtering
-      voiceOptimization: true,   // Voice-specific optimizations
-    };
+    // Initialize pitch detector with user-configured settings
+    const pitchConfig = getPitchDetectorConfig();
+    pitchConfig.sampleRate = audioContextRef.current.sampleRate;
+    pitchConfig.bufferSize = 2048;
+    pitchConfig.temporalSmoothing = true;
+    pitchConfig.voiceOptimization = true;
 
-    pitchDetectorRef.current = createPitchDetector('yin', pitchConfig);
+    const algorithm = settings.algorithmMode === 'auto' ? 'yin' : settings.algorithmMode;
+    pitchDetectorRef.current = createPitchDetector(algorithm, pitchConfig);
 
-    // Initialize temporal filter with voice-optimized configuration
-    const filterConfig: Partial<FilterConfig> = {
-      processNoise: 0.008,         // Lower noise for smoother output
-      measurementNoise: 0.05,      // Reduced measurement noise
-      medianWindowSize: 3,         // Smaller window for better responsiveness
-      adaptiveWindow: 2,           // Adaptive smoothing
-      sensitivityThreshold: 0.25,  // More sensitive to changes
-      confidenceThreshold: 0.3,    // Lower threshold for more detection
-      confidenceWeighting: true,   // Enable confidence weighting
-      outlierThreshold: 2.0,       // Outlier detection
-      outlierRejection: true,      // Enable outlier rejection
-    };
-
+    // Initialize temporal filter with user-configured settings
+    const filterConfig = getTemporalFilterConfig();
     temporalFilterRef.current = createTemporalFilter(filterConfig);
 
     let lastUpdateTime = 0;
@@ -133,8 +116,9 @@ export const useRealtimePitch = (): UseRealtimePitchReturn => {
 
       const now = Date.now();
 
-      // Update pitch at interval, not every frame
-      if (now - lastUpdateTime >= PITCH_UPDATE_INTERVAL) {
+      // Update pitch at interval (respect user's response time setting)
+      const updateInterval = Math.max(50, settings.responseTime); // Minimum 50ms
+      if (now - lastUpdateTime >= updateInterval) {
         const fftSize = analyserRef.current.fftSize;
         const bufferLength = fftSize;
 
