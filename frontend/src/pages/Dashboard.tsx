@@ -11,6 +11,9 @@ import Achievements from '../components/Achievements';
 import PracticeModes from '../components/PracticeModes';
 import AdvancedAnalytics from '../components/AdvancedAnalytics';
 import ExerciseBuilder from '../components/ExerciseBuilder';
+import SocialProfile from '../components/SocialProfile';
+import CommunityFeed from '../components/CommunityFeed';
+import CollaborativePractice from '../components/CollaborativePractice';
 import { useUserProfile } from '../components/UserProfileManager';
 // Temporarily commented out to fix import errors
 // import PitchHistoryGraph from '../components/PitchHistoryGraph';
@@ -24,7 +27,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'recording' | 'statistics' | 'learning' | 'achievements' | 'practice' | 'analytics' | 'builder'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'recording' | 'statistics' | 'learning' | 'achievements' | 'practice' | 'analytics' | 'builder' | 'profile' | 'community' | 'collaborative'>('overview');
 
   // Handle settings changes
   const handleSettingsChange = (newSettings: any) => {
@@ -169,6 +172,36 @@ export default function Dashboard() {
               }`}
             >
               🎯 Challenges
+            </button>
+            <button
+              onClick={() => setActiveTab('community')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'community'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🌍 Community
+            </button>
+            <button
+              onClick={() => setActiveTab('collaborative')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'collaborative'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🎵 Rooms
+            </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'profile'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              👤 Profile
             </button>
             <button
               onClick={() => setActiveTab('achievements')}
@@ -343,6 +376,43 @@ export default function Dashboard() {
         {/* Practice Challenges Tab */}
         {activeTab === 'practice' && (
           <PracticeModes onSessionComplete={handleSessionComplete} />
+        )}
+
+        {/* Community Tab */}
+        {activeTab === 'community' && (
+          <CommunityFeed
+            onPostInteract={(postId, action) => {
+              console.log('Post interaction:', postId, action);
+            }}
+            onChallengeJoin={(challengeId) => {
+              console.log('Challenge joined:', challengeId);
+            }}
+          />
+        )}
+
+        {/* Collaborative Practice Tab */}
+        {activeTab === 'collaborative' && (
+          <CollaborativePractice
+            onRoomJoin={(roomId) => {
+              console.log('Room joined:', roomId);
+            }}
+            onRoomCreate={(roomData) => {
+              console.log('Room created:', roomData);
+            }}
+          />
+        )}
+
+        {/* Social Profile Tab */}
+        {activeTab === 'profile' && (
+          <SocialProfile
+            isOwnProfile={true}
+            onFollow={(userId) => {
+              console.log('Follow:', userId);
+            }}
+            onShare={(type, content) => {
+              console.log('Share:', type, content);
+            }}
+          />
         )}
 
         {/* Achievements Tab */}
