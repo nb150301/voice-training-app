@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createVisualizationOptimizer, type VisualizationOptimizer, type VisualizationConfig } from '../lib/visualizationOptimizer';
 
 interface UseAudioVisualizerReturn {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   analyser: AnalyserNode | null;
+  performanceMetrics: any;
   startVisualizing: (stream: MediaStream, externalAnalyser?: AnalyserNode) => void;
   stopVisualizing: () => void;
 }
@@ -11,20 +13,39 @@ export const useAudioVisualizer = (): UseAudioVisualizerReturn => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number | null>(null);
+  const optimizerRef = useRef<VisualizationOptimizer | null>(null);
+  const stopAnimationRef = useRef<(() => void) | null>(null);
+  const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
 
   const startVisualizing = (stream: MediaStream, externalAnalyser?: AnalyserNode) => {
-    console.log('[Visualizer] Starting visualization with stream:', stream);
-    console.log('[Visualizer] Stream active:', stream.active);
-    console.log('[Visualizer] Audio tracks:', stream.getAudioTracks());
-    console.log('[Visualizer] External analyser provided:', !!externalAnalyser);
+    console.log('[Visualizer] Starting optimized visualization with stream:', stream);
+
+    // Initialize visualization optimizer with voice-optimized settings
+    const vizConfig: Partial<VisualizationConfig> = {
+      targetFPS: 30,                           // Reduced from 60 for better performance
+      enableFrameSkipping: true,
+      adaptiveFrameRate: true,
+      enableHardwareAcceleration: true,
+      enableBatchRendering: true,
+      reduceComplexity: true,
+      enablePerformanceMetrics: true,
+      performanceMonitoringInterval: 1000,
+    };
+
+    optimizerRef.current = createVisualizationOptimizer(vizConfig);
+
+    // Start performance monitoring
+    const performanceInterval = setInterval(() => {
+      if (optimizerRef.current) {
+        setPerformanceMetrics(optimizerRef.current.getMetrics());
+      }
+    }, 1000);
 
     let analyserNode: AnalyserNode;
 
     if (externalAnalyser) {
       // Use external analyser (from AudioProcessor)
       analyserNode = externalAnalyser;
-      console.log('[Visualizer] Using external analyser for processed audio');
       audioContextRef.current = externalAnalyser.context as AudioContext;
     } else {
       // Fallback: create our own analyser for raw audio
@@ -32,148 +53,179 @@ export const useAudioVisualizer = (): UseAudioVisualizerReturn => {
       analyserNode = ctx.createAnalyser();
       analyserNode.fftSize = 2048;
 
-      console.log('[Visualizer] AudioContext created, state:', ctx.state);
-      console.log('[Visualizer] Analyser FFT size:', analyserNode.fftSize);
-
       // Connect stream to analyser
       const source = ctx.createMediaStreamSource(stream);
       source.connect(analyserNode);
-
-      console.log('[Visualizer] MediaStreamSource connected to analyser');
       audioContextRef.current = ctx;
     }
 
     analyserRef.current = analyserNode;
 
-    // Start visualization
-    visualize(analyserNode);
-    console.log('[Visualizer] Visualization loop started');
+    // Start optimized visualization loop
+    stopAnimationRef.current = optimizerRef.current.createAnimationLoop((deltaTime: number) => {
+      visualize(analyserNode, deltaTime);
+    });
+
+    // Store cleanup function
+    stopAnimationRef.current = () => {
+      clearInterval(performanceInterval);
+      if (optimizerRef.current) {
+        optimizerRef.current.dispose();
+        optimizerRef.current = null;
+      }
+    };
+
+    console.log('[Visualizer] Optimized visualization loop started');
   };
 
-  const visualize = (analyserNode: AnalyserNode) => {
+  const visualize = (analyserNode: AnalyserNode, deltaTime: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.error('[Visualizer] Canvas ref is null');
+    if (!canvas || !optimizerRef.current) {
       return;
     }
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error('[Visualizer] Canvas context is null');
+    // Check if we should render this frame
+    if (!optimizerRef.current.shouldRender()) {
       return;
     }
 
-    console.log('[Visualizer] Canvas and context ready:', canvas.width, 'x', canvas.height);
+    // Start performance measurement
+    const endMeasurement = optimizerRef.current.startFrameMeasurement();
 
-    const bufferLength = analyserNode.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    const frequencyData = new Uint8Array(bufferLength);
+    try {
+      // Get optimized canvas context
+      const ctx = optimizerRef.current.getOptimizedContext(canvas);
 
-    let frameCount = 0;
-    const draw = () => {
-      animationRef.current = requestAnimationFrame(draw);
+      // Optimize canvas if not already optimized
+      if (!canvas.dataset.optimized) {
+        optimizerRef.current.optimizeCanvas(canvas);
+        canvas.dataset.optimized = 'true';
+      }
 
-      // Get time domain data for waveform
+      const bufferLength = analyserNode.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      const frequencyData = new Uint8Array(bufferLength);
+
+      // Get audio data
       analyserNode.getByteTimeDomainData(dataArray);
-      // Get frequency data for bars
       analyserNode.getByteFrequencyData(frequencyData);
 
-      // Log every 60 frames (about 1 second)
-      if (frameCount % 60 === 0) {
-        const avgFreq = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
-        console.log('[Visualizer] Frame:', frameCount, 'Avg frequency:', avgFreq);
+      // Get optimization settings based on current performance
+      const settings = optimizerRef.current.getOptimizedDrawingSettings();
+
+      // Clear background (simplified when in high performance mode)
+      if (settings.simplifiedRendering) {
+        // Simple solid color background
+        ctx.fillStyle = 'rgb(17, 24, 39)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else {
+        // Full gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgb(17, 24, 39)');
+        gradient.addColorStop(1, 'rgb(30, 41, 59)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
-      frameCount++;
 
-      // Clear with gradient background
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, 'rgb(17, 24, 39)');
-      gradient.addColorStop(1, 'rgb(30, 41, 59)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Draw frequency bars (optimized based on performance)
+      const barCount = settings.fewerParticles ? 32 : 64;
+      const barWidth = canvas.width / barCount;
+      const barGap = settings.reducedDetail ? 1 : 2;
 
-      // Draw frequency bars
-      const barWidth = canvas.width / 64;
-      const barGap = 2;
-      for (let i = 0; i < 64; i++) {
+      for (let i = 0; i < barCount; i++) {
         const barHeight = (frequencyData[i] / 255) * canvas.height * 0.8;
         const x = i * (barWidth + barGap);
         const y = canvas.height - barHeight;
 
-        // Create gradient for bars
-        const barGradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-        barGradient.addColorStop(0, 'rgb(139, 92, 246)'); // Purple
-        barGradient.addColorStop(0.5, 'rgb(99, 102, 241)'); // Indigo
-        barGradient.addColorStop(1, 'rgb(59, 130, 246)'); // Blue
-
-        ctx.fillStyle = barGradient;
-        ctx.fillRect(x, y, barWidth - barGap, barHeight);
+        if (settings.simplifiedGradients) {
+          // Simple solid color bars
+          ctx.fillStyle = `hsl(${240 + (i / barCount) * 60}, 70%, 50%)`;
+          ctx.fillRect(x, y, barWidth - barGap, barHeight);
+        } else {
+          // Full gradient bars
+          const barGradient = ctx.createLinearGradient(0, y, 0, canvas.height);
+          barGradient.addColorStop(0, 'rgb(139, 92, 246)');
+          barGradient.addColorStop(0.5, 'rgb(99, 102, 241)');
+          barGradient.addColorStop(1, 'rgb(59, 130, 246)');
+          ctx.fillStyle = barGradient;
+          ctx.fillRect(x, y, barWidth - barGap, barHeight);
+        }
       }
 
-      // Draw waveform overlay
-      ctx.lineWidth = 3;
-      const waveGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-      waveGradient.addColorStop(0, 'rgba(34, 211, 238, 0.8)'); // Cyan
-      waveGradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.8)'); // Purple
-      waveGradient.addColorStop(1, 'rgba(236, 72, 153, 0.8)'); // Pink
-      ctx.strokeStyle = waveGradient;
-      ctx.beginPath();
+      // Draw waveform overlay (skip animations if requested)
+      if (!settings.skipAnimations) {
+        ctx.lineWidth = settings.reducedDetail ? 2 : 3;
 
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * canvas.height) / 2;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
+        if (settings.simplifiedGradients) {
+          ctx.strokeStyle = 'rgba(34, 211, 238, 0.6)';
         } else {
-          ctx.lineTo(x, y);
+          const waveGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+          waveGradient.addColorStop(0, 'rgba(34, 211, 238, 0.8)');
+          waveGradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.8)');
+          waveGradient.addColorStop(1, 'rgba(236, 72, 153, 0.8)');
+          ctx.strokeStyle = waveGradient;
         }
 
-        x += sliceWidth;
+        ctx.beginPath();
+
+        const sampleRate = settings.reducedDetail ? 4 : 2; // Reduce waveform detail
+        const sliceWidth = canvas.width / (bufferLength / sampleRate);
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i += sampleRate) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * canvas.height) / 2;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+
+          x += sliceWidth;
+        }
+
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
       }
 
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-
-      // Draw center line
+      // Draw center line (simplified)
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, canvas.height / 2);
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
-    };
 
-    draw();
+    } finally {
+      // End performance measurement
+      endMeasurement();
+    }
   };
 
   const stopVisualizing = useCallback(() => {
-    console.log('[Visualizer] Stopping visualization...');
+    console.log('[Visualizer] Stopping optimized visualization...');
 
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
+    // Stop animation loop
+    if (stopAnimationRef.current) {
+      stopAnimationRef.current();
+      stopAnimationRef.current = null;
     }
 
     if (audioContextRef.current) {
-      console.log('[Visualizer] AudioContext state before close:', audioContextRef.current.state);
       if (audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
-        console.log('[Visualizer] AudioContext closed');
-      } else {
-        console.log('[Visualizer] AudioContext already closed, skipping');
       }
       audioContextRef.current = null;
     }
 
     analyserRef.current = null;
+    setPerformanceMetrics(null);
 
     // Clear canvas
     const canvas = canvasRef.current;
     if (canvas) {
+      delete canvas.dataset.optimized;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -190,6 +242,7 @@ export const useAudioVisualizer = (): UseAudioVisualizerReturn => {
   return {
     canvasRef,
     analyser: analyserRef.current,
+    performanceMetrics,
     startVisualizing,
     stopVisualizing,
   };
