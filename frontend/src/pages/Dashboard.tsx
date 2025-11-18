@@ -7,6 +7,10 @@ import PitchStatistics from '../components/PitchStatistics';
 import AudioSettings from '../components/AudioSettings';
 import OnboardingFlow from '../components/OnboardingFlow';
 import LearningPath from '../components/LearningPath';
+import Achievements from '../components/Achievements';
+import PracticeModes from '../components/PracticeModes';
+import AdvancedAnalytics from '../components/AdvancedAnalytics';
+import ExerciseBuilder from '../components/ExerciseBuilder';
 import { useUserProfile } from '../components/UserProfileManager';
 // Temporarily commented out to fix import errors
 // import PitchHistoryGraph from '../components/PitchHistoryGraph';
@@ -20,7 +24,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'recording' | 'statistics' | 'learning'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'recording' | 'statistics' | 'learning' | 'achievements' | 'practice' | 'analytics' | 'builder'>('overview');
 
   // Handle settings changes
   const handleSettingsChange = (newSettings: any) => {
@@ -81,6 +85,18 @@ export default function Dashboard() {
     setActiveTab('recording');
   };
 
+  const handleSessionComplete = (session: any) => {
+    console.log('Practice session completed:', session);
+    // Update user progress
+    if (profile && session.completed) {
+      const completedExercises = [...(profile.progress?.completedExercises || [])];
+      if (session.challenge?.id && !completedExercises.includes(session.challenge.id)) {
+        completedExercises.push(session.challenge.id);
+        // Update progress in real implementation
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -113,46 +129,76 @@ export default function Dashboard() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex space-x-1 md:space-x-4 overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
                 activeTab === 'overview'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Overview
+              🏠 Overview
             </button>
             <button
               onClick={() => setActiveTab('recording')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
                 activeTab === 'recording'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Recording
-            </button>
-            <button
-              onClick={() => setActiveTab('statistics')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'statistics'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Statistics
+              🎤 Recording
             </button>
             <button
               onClick={() => setActiveTab('learning')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
                 activeTab === 'learning'
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Learning Path
+              📚 Learning
+            </button>
+            <button
+              onClick={() => setActiveTab('practice')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'practice'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🎯 Challenges
+            </button>
+            <button
+              onClick={() => setActiveTab('achievements')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'achievements'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🏆 Achievements
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'analytics'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📊 Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('builder')}
+              className={`py-4 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap ${
+                activeTab === 'builder'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              ✨ Builder
             </button>
           </div>
         </div>
@@ -292,6 +338,38 @@ export default function Dashboard() {
         {/* Learning Path Tab */}
         {activeTab === 'learning' && (
           <LearningPath onExerciseSelect={handleExerciseSelect} />
+        )}
+
+        {/* Practice Challenges Tab */}
+        {activeTab === 'practice' && (
+          <PracticeModes onSessionComplete={handleSessionComplete} />
+        )}
+
+        {/* Achievements Tab */}
+        {activeTab === 'achievements' && (
+          <Achievements onAchievementUnlocked={(achievement) => {
+            console.log('Achievement unlocked:', achievement);
+          }} />
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <AdvancedAnalytics onExportData={() => {
+            console.log('Exporting analytics data...');
+          }} />
+        )}
+
+        {/* Exercise Builder Tab */}
+        {activeTab === 'builder' && (
+          <ExerciseBuilder
+            onExerciseCreated={(exercise) => {
+              console.log('Exercise created:', exercise);
+            }}
+            onTemplateSelected={(template) => {
+              console.log('Template selected:', template);
+              setActiveTab('practice');
+            }}
+          />
         )}
 
         {error && (
