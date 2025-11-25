@@ -1,16 +1,39 @@
 # Voice Training App
 
-A Duolingo-style voice training application to help users improve their voice (deeper tone for males) through daily practice sessions with gamification and progress tracking.
+A Duolingo-style progressive web app for voice training with AI-powered analysis, real-time feedback, and community features. Help users improve vocal quality through structured daily practice with gamification.
 
-**Status:** Phase 1 Complete | Full Authentication & Infrastructure ✓
+**Status:** Phase 5 Complete | Advanced Features & AI Personalization ✅
+
+## Features
+
+✅ User authentication & profiles
+✅ Audio recording & real-time pitch detection
+✅ Advanced voice analysis & visualization
+✅ Progress tracking & statistics
+✅ Social features & community
+✅ AI-powered personalized coaching
+✅ Vocal health monitoring
 
 ## Tech Stack
 
-- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + Zustand
+- **Frontend:** React 19 + TypeScript + Vite + Tailwind CSS 4 + Zustand
 - **Backend:** Go 1.21+ + Gin Framework
-- **Database:** PostgreSQL 15
-- **Cache:** Redis 7
+- **Database:** PostgreSQL 15 + Redis 7
+- **Audio:** Web Audio API, FFmpeg, FFT Analysis
 - **Authentication:** JWT with httpOnly cookies
+
+## Documentation
+
+📖 **[Complete Documentation](./docs/INDEX.md)** - Start here for navigation
+
+### Quick Links
+- **[Setup Guide](./docs/SETUP.md)** - Getting started
+- **[API Reference](./docs/API.md)** - All endpoints
+- **[Architecture](./docs/system-architecture.md)** - System design
+- **[Development](./docs/DEVELOPMENT.md)** - Code standards
+- **[Project Overview](./docs/project-overview-pdr.md)** - Product requirements
+- **[Codebase Summary](./docs/codebase-summary.md)** - Code structure
+- **[Troubleshooting](./docs/TROUBLESHOOTING.md)** - Common issues
 
 ## Prerequisites
 
@@ -202,70 +225,51 @@ VITE_API_URL=http://localhost:8080
 - Input validation on all endpoints
 - Parameterized SQL queries (SQL injection protection)
 
-## Phase 1 Completion Summary
+## Development Progress
 
-**Implemented Features:**
-- ✅ Complete authentication system (Register, Login, Logout, Me)
-- ✅ JWT token management with httpOnly cookies
-- ✅ PostgreSQL database with users/sessions schema
-- ✅ Redis caching infrastructure setup
-- ✅ React frontend with routing (Login, Register, Dashboard pages)
-- ✅ Protected routes and state management (Zustand)
-- ✅ API error handling and validation
-- ✅ Docker Compose for local development
-- ✅ Database migrations and schema setup
-- ✅ Development tooling (Makefile, Air hot-reload)
-- ✅ All tests passing (31/31)
+| Phase | Status | Key Features |
+|-------|--------|-------------|
+| Phase 1 | ✅ Complete | Authentication, Infrastructure, JWT |
+| Phase 2 | ✅ Complete | Audio Recording, Upload, FFmpeg Processing |
+| Phase 3 | ✅ Complete | Pitch Detection (FFT), Real-time Analysis, Visualization |
+| Phase 4 | ✅ Complete | Social Features, Community Feed, Profiles |
+| Phase 5 | ✅ Complete | AI Coaching, ML Recommendations, Health Monitoring |
+| Phase 6 | 🚧 Planned | Gamification System, UI/UX Polish |
+| Phase 7 | 📋 Planned | Exercise Library, Advanced Training |
+| Phase 8 | 📋 Planned | Testing, Deployment, Production Launch |
 
-**Database Schema:**
-- `users` table: id, email, password_hash, streak_count, last_practice_date, total_xp, level, timestamps
-- `sessions` table: id, user_id, duration, exercises_completed, xp_earned, created_at
-
-## Next Steps (Future Phases)
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 2 | Audio capture and processing (MediaRecorder API) | Not Started |
-| 3 | Voice analysis engine (pitch + formant detection) | Not Started |
-| 4 | Exercise system (10+ voice training exercises) | Not Started |
-| 5 | Gamification (streaks, XP, achievements, leaderboard) | Not Started |
-| 6 | UI/UX enhancements and polish | Not Started |
-| 7 | Testing, deployment, monitoring | Not Started |
+See **[Project Roadmap](./docs/project-overview-pdr.md#project-roadmap)** for detailed phase breakdown.
 
 ## Troubleshooting
 
-### Docker won't start
-1. Make sure Docker Desktop is running
-2. Check Docker daemon: `docker ps`
-3. Restart Docker Desktop if needed
+For detailed troubleshooting, see **[Troubleshooting Guide](./docs/TROUBLESHOOTING.md)**.
 
-### Database connection errors
-1. Check if PostgreSQL is running: `docker ps`
-2. Verify DATABASE_URL in .env
-3. Check logs: `docker logs voice-training-postgres`
+**Quick fixes:**
+- Docker won't start → Ensure Docker Desktop is running
+- Database errors → Check `docker ps` and DATABASE_URL
+- CORS errors → Verify FRONTEND_URL in backend/.env
+- Port in use → `lsof -i :8080` then `kill -9 <PID>`
 
-### CORS errors
-1. Verify FRONTEND_URL in backend/.env matches your frontend URL
-2. Check browser console for specific CORS error
-3. Restart backend server after changing .env
+## Contributing
 
-### Port already in use
-```bash
-# Check what's using port 8080 or 5173
-lsof -i :8080
-lsof -i :5173
+1. Read **[Development Guidelines](./docs/DEVELOPMENT.md)**
+2. Follow **[Code Standards](./docs/code-standards.md)**
+3. Fork repository and create feature branch
+4. Submit pull request with clear description
 
-# Kill the process if needed
-kill -9 <PID>
+## Project Structure
+
 ```
+voice-training-app/
+├── frontend/          # React app (Vite + TypeScript)
+├── backend/           # Go API server
+├── docs/              # Documentation
+├── docker-compose.yml # Dev environment
+└── Makefile           # Dev commands
+```
+
+See **[Codebase Summary](./docs/codebase-summary.md)** for complete structure.
 
 ## License
 
 MIT
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
