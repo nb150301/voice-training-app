@@ -105,8 +105,8 @@ interface SocialProfileProps {
   onShare?: (type: string, content: any) => void;
 }
 
-export default function SocialProfile({ profile, isOwnProfile = false, onFollow, onShare }: SocialProfileProps) {
-  const { userProfile } = useUserProfile();
+export default function SocialProfile({ profile: propProfile, isOwnProfile = false, onFollow, onShare }: SocialProfileProps) {
+  const { profile } = useUserProfile();
   const { isMobile } = useResponsiveBreakpoints();
   const [activeTab, setActiveTab] = useState<'overview' | 'achievements' | 'shared' | 'activity'>('overview');
   const [isFollowing, setIsFollowing] = useState(false);
@@ -116,11 +116,11 @@ export default function SocialProfile({ profile, isOwnProfile = false, onFollow,
   const generateDemoProfile = (): SocialProfile => {
     return {
       id: `social_${Date.now()}`,
-      userId: userProfile?.profile?.id || '',
-      username: userProfile?.profile?.email?.split('@')[0] || 'user123',
-      displayName: userProfile?.profile?.name || 'Voice Trainer',
+      userId: profile?.id || '',
+      username: profile?.email?.split('@')[0] || 'user123',
+      displayName: profile?.name || 'Voice Trainer',
       bio: 'Passionate about improving my voice and helping others do the same!',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userProfile?.profile?.email || 'default'}`,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.email || 'default'}`,
       banner: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&h=300&fit=crop',
       location: 'Los Angeles, CA',
       website: 'https://myportfolio.com',
@@ -129,24 +129,24 @@ export default function SocialProfile({ profile, isOwnProfile = false, onFollow,
         youtube: 'My Voice Journey',
         soundcloud: 'voice-training-mixes',
       },
-      voiceType: userProfile?.profile?.voiceProfile?.voiceType || 'unknown',
-      experience: userProfile?.profile?.progress?.totalSessions ?
-        (userProfile.profile.progress.totalSessions < 10 ? 'beginner' :
-         userProfile.profile.progress.totalSessions < 50 ? 'intermediate' :
-         userProfile.profile.progress.totalSessions < 100 ? 'advanced' : 'professional') : 'beginner',
+      voiceType: profile?.voiceProfile?.voiceType || 'unknown',
+      experience: profile?.progress?.totalSessions ?
+        (profile.progress.totalSessions < 10 ? 'beginner' :
+         profile.progress.totalSessions < 50 ? 'intermediate' :
+         profile.progress.totalSessions < 100 ? 'advanced' : 'professional') : 'beginner',
       favoriteGenres: ['Pop', 'Jazz', 'Musical Theatre'],
       goals: ['Improve pitch accuracy', 'Expand vocal range', 'Master breath control'],
       instruments: ['Piano', 'Guitar'],
       isPublic: true,
-      joinDate: userProfile?.profile?.createdAt || new Date().toISOString(),
+      joinDate: profile?.createdAt || new Date().toISOString(),
       lastActive: new Date().toISOString(),
       stats: {
         followers: Math.floor(Math.random() * 1000) + 50,
         following: Math.floor(Math.random() * 200) + 20,
-        sharedExercises: userProfile?.profile?.progress?.completedExercises?.length || 0,
+        sharedExercises: profile?.progress?.completedExercises?.length || 0,
         completedChallenges: Math.floor(Math.random() * 50) + 10,
-        totalSessions: userProfile?.profile?.progress?.totalSessions || 0,
-        streakDays: userProfile?.profile?.progress?.currentStreak || 0,
+        totalSessions: profile?.progress?.totalSessions || 0,
+        streakDays: profile?.progress?.currentStreak || 0,
       },
       achievements: {
         recentAchievements: ['week_warrior', 'pitch_perfect'],
@@ -157,7 +157,7 @@ export default function SocialProfile({ profile, isOwnProfile = false, onFollow,
     };
   };
 
-  const [socialProfileData, setSocialProfileData] = useState<SocialProfile>(profile || generateDemoProfile());
+  const [socialProfileData, setSocialProfileData] = useState<SocialProfile>(propProfile || generateDemoProfile());
   const [isEditing, setIsEditing] = useState(false);
 
   // Generate demo posts
