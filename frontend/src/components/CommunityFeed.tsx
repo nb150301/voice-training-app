@@ -13,7 +13,7 @@ import {
 } from './ui/ResponsiveLayout';
 import { useResponsiveBreakpoints } from '../../hooks/useResponsiveBreakpoints';
 import { useUserProfile } from './UserProfileManager';
-import { SocialProfile, CommunityPost } from './SocialProfile';
+import type { SocialProfile, CommunityPost } from './SocialProfile';
 
 export interface CommunityChallenge {
   id: string;
