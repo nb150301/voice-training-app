@@ -4,7 +4,7 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import AudioRecorder from '../components/AudioRecorder';
 import PitchStatistics from '../components/PitchStatistics';
-import AudioSettings from '../components/AudioSettings';
+// import AudioSettings from '../components/AudioSettings'; // component not yet created
 import OnboardingFlow from '../components/OnboardingFlow';
 import LearningPath from '../components/LearningPath';
 import Achievements from '../components/Achievements';
@@ -385,9 +385,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <AudioSettings onSettingsChange={handleSettingsChange} />
-            </div>
+            {/* AudioSettings component not yet created */}
           </div>
         )}
 

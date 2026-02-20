@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import DashboardEnhanced from './components/DashboardEnhanced';
-import DashboardSimple from './pages/Dashboard-simple';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Lazy load dashboards to prevent Phase 5 components from blocking /login route
+const DashboardEnhanced = lazy(() => import('./pages/Dashboard'));
+const DashboardSimple = lazy(() => import('./pages/Dashboard-simple'));
 
 function App() {
   return (
@@ -15,7 +18,9 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardEnhanced />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-gray-600">Loading...</div></div>}>
+                <DashboardEnhanced />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -24,7 +29,9 @@ function App() {
           path="/dashboard-simple"
           element={
             <ProtectedRoute>
-              <DashboardSimple />
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-gray-600">Loading...</div></div>}>
+                <DashboardSimple />
+              </Suspense>
             </ProtectedRoute>
           }
         />

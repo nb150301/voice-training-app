@@ -518,7 +518,7 @@ export default function MLRecommendations({ onExerciseSelect, onRecommendationAc
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-900 capitalize">
                   {userProfileML.experience}
-                </ResponsiveText>
+                </div>
                 <ResponsiveText size="sm" color="text-blue-700">
                   Level
                 </ResponsiveText>
@@ -678,6 +678,7 @@ export default function MLRecommendations({ onExerciseSelect, onRecommendationAc
                         </ResponsiveButton>
                       </div>
                     </div>
+                  </div>
                   </ResponsiveCard>
               ))}
             </ResponsiveGrid>
