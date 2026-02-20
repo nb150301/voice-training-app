@@ -98,7 +98,7 @@ export default function AIVoiceCoach({ onSessionComplete, onExerciseComplete }: 
   const [realTimeFeedback, setRealTimeFeedback] = useState<string[]>([]);
   const [sessionProgress, setSessionProgress] = useState(0);
 
-  const voiceType = profile?.profile?.voiceProfile?.voiceType || 'unknown';
+  const voiceType = profile?.voiceProfile?.voiceType || 'unknown';
 
   // Generate AI lesson plans based on user profile
   const generateAILessonPlan = (): AILessonPlan => {

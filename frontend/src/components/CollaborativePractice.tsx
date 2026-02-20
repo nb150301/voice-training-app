@@ -233,10 +233,10 @@ export default function CollaborativePractice({ onRoomJoin, onRoomCreate }: Coll
     // Add current user to participants
     const currentUser: Participant = {
       id: 'current_user',
-      userId: profile?.profile?.id || 'current',
-      displayName: profile?.profile?.name || 'You',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.profile?.email || 'current'}`,
-      voiceType: profile?.profile?.voiceProfile?.voiceType || 'unknown',
+      userId: profile?.id || 'current',
+      displayName: profile?.name || 'You',
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.email || 'current'}`,
+      voiceType: profile?.voiceProfile?.voiceType || 'unknown',
       part: 'observer',
       isHost: false,
       isReady: false,
@@ -258,9 +258,9 @@ export default function CollaborativePractice({ onRoomJoin, onRoomCreate }: Coll
 
     const room: PracticeRoom = {
       id: `room_${Date.now()}`,
-      hostId: profile?.profile?.id || 'current',
-      hostName: profile?.profile?.name || 'You',
-      hostAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.profile?.email || 'host'}`,
+      hostId: profile?.id || 'current',
+      hostName: profile?.name || 'You',
+      hostAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.email || 'host'}`,
       currentParticipants: 1,
       isActive: true,
       tags: newRoom.tags || [],
@@ -289,7 +289,7 @@ export default function CollaborativePractice({ onRoomJoin, onRoomCreate }: Coll
     const newMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
       senderId: 'current_user',
-      senderName: profile?.profile?.name || 'You',
+      senderName: profile?.name || 'You',
       content: chatInput,
       timestamp: new Date().toISOString(),
       type: 'chat',

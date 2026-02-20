@@ -192,12 +192,12 @@ export default function AISongAnalysis({ onSongSelect, onPracticePlanGenerated }
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [currentAnalysis, setCurrentAnalysis] = useState<SongAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  [practicePlan, setPracticePlan] = useState<PracticePlan | null>(null);
+  const [practicePlan, setPracticePlan] = useState<PracticePlan | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
 
-  const userVoiceType = profile?.profile?.voiceProfile?.voiceType || 'unknown';
+  const userVoiceType = profile?.voiceProfile?.voiceType || 'unknown';
   const userExperience = profile?.progress?.totalSessions ?
     (profile.progress.totalSessions < 10 ? 'beginner' :
      profile.progress.totalSessions < 50 ? 'intermediate' :

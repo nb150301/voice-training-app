@@ -269,8 +269,8 @@ export default function MLRecommendations({ onExerciseSelect, onRecommendationAc
     if (!profile) return;
 
     const userProfile: UserProfileML = {
-      userId: profile.profile?.id || 'user',
-      voiceType: profile.profile?.voiceProfile?.voiceType || 'unknown',
+      userId: profile.id || 'user',
+      voiceType: profile.voiceProfile?.voiceType || 'unknown',
       experience: profile.progress?.totalSessions ?
         (profile.progress.totalSessions < 10 ? 'beginner' :
          profile.progress.totalSessions < 50 ? 'intermediate' :
